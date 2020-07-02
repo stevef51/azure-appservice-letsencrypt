@@ -11,15 +11,27 @@
     "mailAddress": {
       "type": "string",
       "metadata": {
-        "description": "Email address for Let's Encrypt account."
+        "description": "Email address for ACME account."
+      }
+    },
+    "acmeEndpoint": {
+      "type": "string",
+      "allowedValues": [
+        "https://acme-v02.api.letsencrypt.org/",
+        "https://api.buypass.com/acme/"
+      ],
+      "defaultValue": "https://acme-v02.api.letsencrypt.org/",
+      "metadata": {
+        "description": "Certification authority ACME Endpoint."
       }
     }
   },
   "variables": {
-    "functionAppName": "[concat(parameters('appNamePrefix'), uniquestring(resourceGroup().id, deployment().name))]",
+    "functionAppName": "[concat(parameters('appNamePrefix'), '-', substring(uniquestring(resourceGroup().id, deployment().name), 0, 4))]",
     "storageAccountName": "[concat(uniquestring(resourceGroup().id, deployment().name), 'azfunctions')]",
     "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-    "mailAddress": "[parameters('mailAddress')]"
+    "mailAddress": "[parameters('mailAddress')]",
+    "acmeEndpoint": "[parameters('acmeEndpoint')]"
   },
   "resources": [
     {
@@ -81,10 +93,6 @@
               "value": "[reference(resourceId('Microsoft.Insights/components', variables('functionAppName')), '2015-05-01').InstrumentationKey]"
             },
             {
-              "name": "AzureWebJobsDashboard",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountId'), '2018-11-01').keys[0].value)]"
-            },
-            {
               "name": "AzureWebJobsStorage",
               "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountId'), '2018-11-01').keys[0].value)]"
             },
@@ -98,19 +106,27 @@
             },
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "https://shibayan.blob.core.windows.net/azure-appservice-letsencrypt/latest.zip"
+              "value": "https://shibayan.blob.core.windows.net/azure-appservice-letsencrypt/v3/latest.zip"
             },
             {
               "name": "FUNCTIONS_EXTENSION_VERSION",
-              "value": "~2"
+              "value": "~3"
             },
             {
-              "name": "LetsEncrypt:SubscriptionId",
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet"
+            },
+            {
+              "name": "Acmebot:SubscriptionId",
               "value": "[subscription().subscriptionId]"
             },
             {
-              "name": "LetsEncrypt:Contacts",
+              "name": "Acmebot:Contacts",
               "value": "[variables('mailAddress')]"
+            },
+            {
+              "name": "Acmebot:Endpoint",
+              "value": "[variables('acmeEndpoint')]"
             }
           ],
           "clientAffinityEnabled": false

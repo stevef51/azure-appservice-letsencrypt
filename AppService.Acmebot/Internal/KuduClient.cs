@@ -4,27 +4,29 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AzureAppService.LetsEncrypt.Internal
+namespace AppService.Acmebot.Internal
 {
-    internal class KuduApiClient
+    public class KuduClient
     {
-        public KuduApiClient(string scmUrl, string userName, string password)
+        public KuduClient(HttpClient httpClient, string scmUrl, string userName, string password)
         {
+            _httpClient = httpClient;
             _scmUrl = scmUrl;
             _basicAuth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userName}:{password}"));
         }
 
+        private readonly HttpClient _httpClient;
         private readonly string _scmUrl;
         private readonly string _basicAuth;
 
-        private static readonly HttpClient _httpClient = new HttpClient();
-
-        public Task WriteFileAsync(string filePath, string value)
+        public Task WriteFileAsync(string filePath, string content)
         {
             var request = new HttpRequestMessage(HttpMethod.Put, $"https://{_scmUrl}/api/vfs/site/{filePath}");
 
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", _basicAuth);
-            request.Content = new StringContent(value, Encoding.UTF8);
+            request.Headers.IfMatch.Add(EntityTagHeaderValue.Any);
+
+            request.Content = new StringContent(content, Encoding.UTF8);
 
             return _httpClient.SendAsync(request);
         }
